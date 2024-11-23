@@ -1,0 +1,17 @@
+Project parc_dash {
+  database_type: 'Mongo'
+  Note: '''
+    # Physics-aware Recurrent Convolutional Neural Networks (PARCv2) Dashboard Project
+  '''
+}
+Table Documents as D {
+    id varchar [pk]
+    variable varchar
+    file varchar
+    timestep int
+    x int
+    y int
+    value float
+    note: "Data from Visual Intelligence Laboratory. (2024). PARCv2: Physics-aware Recurrent Convolutional Neural Networks for Spatiotemporal Dynamics Modeling [Data set]. Zenodo."
+}
+
