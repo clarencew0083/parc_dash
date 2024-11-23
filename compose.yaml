@@ -15,10 +15,21 @@ services:
         target: /etc/influxdb2
     networks:
       - influxdbnetwork
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    env_file:
+      - .env
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - influxdbnetwork
 
 volumes:
   influxdb2-data:
   influxdb2-config:
+  mongodata:
 
 networks:
   influxdbnetwork:
