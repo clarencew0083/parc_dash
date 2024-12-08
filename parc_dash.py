@@ -75,22 +75,20 @@ class ParcDash:
                     # upload channel data to mongo
                     self.upload_one_simulation_to_mongo(df, channel_list[channel_idx], filename)
 
-                # Example: Accessing the DataFrame for the first channel
-                first_channel_df = channel_dataframes[0]
-                print(first_channel_df.head())
+                #first_channel_df = channel_dataframes[0]
+                #print(first_channel_df.head())
 
     def upload_one_simulation_to_mongo(self, df, channel_name, filename):
         mongo_parc = self.connect_to_mongo()
         result = df.to_json(orient="records")
 
-        # Convert result from JSON string to Python object (list of records)
+
         result = json.loads(result)
 
-        # Create a nested JSON structure
         new_json = {
             "variable": channel_name,
             "file": filename.name.split('.')[0],
-            "Data": result  # Assign the parsed list of records here
+            "Data": result  
         }
 
         large_json = json.dumps(new_json)
@@ -126,10 +124,9 @@ class ParcDash:
             "variable": channel_name,
             "file": file_name
         }
-        # Perform the query
+
         result = sims_collection.find(query)
-        
-        # Fetch all the matching documents
+
         documents = list(result)
 
         return documents
@@ -137,8 +134,8 @@ class ParcDash:
     def query_variable_from_mongo(self):
         # Connect to MongoDB collection
         mongo_parc = self.connect_to_mongo()
-        sims_collection = mongo_parc["sims"]  # Access the 'sims' collection
-        # Perform the query
+        sims_collection = mongo_parc["sims"]
+
         cursor = sims_collection.find({}, {"variable":1, "file":0, "_id":0})
         result_dumps = json.dumps(cursor)
         result_loads = json.loads(result_dumps)

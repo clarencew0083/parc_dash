@@ -7,11 +7,18 @@ Project parc_dash {
 Table Documents as D {
     id varchar [pk]
     variable varchar
+    file_id varchar 
+    note: "Data from Visual Intelligence Laboratory. (2024). PARCv2: Physics-aware Recurrent Convolutional Neural Networks for Spatiotemporal Dynamics Modeling [Data set]. Zenodo."
+}
+
+Table File as F {
+    file_id varchar [pk]
     file varchar
     timestep int
     x int
     y int
     value float
-    note: "Data from Visual Intelligence Laboratory. (2024). PARCv2: Physics-aware Recurrent Convolutional Neural Networks for Spatiotemporal Dynamics Modeling [Data set]. Zenodo."
+    note: "Timestep, x, y and value are stored in a dictionary named data that is nested with this file"
 }
 
+Ref: D.file_id - F.file_id
