@@ -21,7 +21,7 @@ class ParcDash:
             mongo_parc.parc_dash.drop()
         return mongo_parc
     
-    def do_something(self):
+    def upload_to_mongo(self):
                 
         # assign directory
         directory = 'data/train/'
@@ -110,7 +110,7 @@ class ParcDash:
         # Insert metadata into the collection
         sims_collection = mongo_parc["sims"]  # Access the 'sims' collection
         sims_collection.insert_one(metadata)
-        print(f"Uploaded {filename.name} to MongoDB")
+        print(f"Uploaded {filename.name}, {channel_name} to MongoDB")
         # Return the file_id and metadata inserted into the collection
         return metadata
 
@@ -162,128 +162,86 @@ class ParcDash:
         data = json.loads(large_json)
 
         return data
-    '''
-    def display_ground_truth_plotly2(ground_truth, batch_idx=0,):
-        channels = ["pressure", "Reynolds", "u", "v"]  # Adjust as per your data
-        cmaps = [
-            "viridis",
-            "plasma",
-            "inferno",
-            "magma",
-        ]  # Adjust as per your preference
-        ground_truth_sequence = ground_truth[:, batch_idx].cpu().numpy()  # (timesteps, channels, height, width)
-        timesteps = len(ground_truth['timestep'].unique())
-        num_channels, height, width = ground_truth_sequence.shape()
-        print(f"timesteps: {timesteps}, num_channels: {num_channels}, height: {height}, width: {width}")
 
-        for i, channel_name in enumerate(channels):
-            cmap = cmaps[i]
 
-            # Create a figure with frames
-            fig = go.Figure()
-
-            # Add the first frame for initialization
-            gt_frame = ground_truth_sequence[0, i]
-            fig.add_trace(
-                go.Heatmap(
-                    z=gt_frame,
-                    colorscale=cmap,
-                    showscale=True,
-                    name="Ground Truth",
-                )
-            )
-
-            # Add animation frames
-            frames = []
-            for t in range(timesteps):
-                gt_frame = ground_truth_sequence[t, i]
-                frames.append(
-                    go.Frame(
-                        data=[
-                            go.Heatmap(z=gt_frame, colorscale=cmap, showscale=False),
-                        ],
-                        name=f"frame_{t}",
-                    )
-                )
-
-            fig.frames = frames
-
-            # Update layout
-            fig.update_layout(
-                title=f"Channel: {channel_name} - Ground Truth",
-                xaxis=dict(title="Width", 
-                        showgrid=False,
-                        zeroline=False,
-                        visible=False,
-                        showticklabels=False,
-                        range=[0, width]),
-                yaxis=dict(title="Height", 
-                        showgrid=False,
-                        zeroline=False,
-                        showticklabels=False,
-                        visible=False,
-                        scaleanchor="x", 
-                        range=[height, 0]),
-                updatemenus=[
-                    {
-                        "type": "buttons",
-                        "showactive": False,
-                        "buttons": [
-                            {
-                                "label": "Play",
-                                "method": "animate",
-                                "args": [
-                                    None,
-                                    {
-                                        "frame": {"duration": 500, "redraw": True},
-                                        "fromcurrent": True,
-                                    },
-                                ],
-                            },
-                            {
-                                "label": "Pause",
-                                "method": "animate",
-                                "args": [
-                                    [None],
-                                    {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"},
-                                ],
-                            },
-                        ],
-                    }
-                ],
-            )
-
-            # Add slider for controlling frames
-            sliders = [
-                {
-                    "steps": [
-                        {
-                            "args": [
-                                [f"frame_{t}"],
-                                {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"},
-                            ],
-                            "label": f"Timestep {t + 1}",
-                            "method": "animate",
-                        }
-                        for t in range(timesteps)
-                    ],
-                    "active": 0,
-                    "x": 0.1,
-                    "len": 0.9,
-                    "xanchor": "left",
-                    "yanchor": "top",
-                    "y": -0.2,
-                }
-            ]
-
-            fig.update_layout(sliders=sliders)
-
-            # Show the figure
-            fig.show()
-    '''
-    def display_ground_truth_plotly(self, ground_truth):
+    def display_ground_truth_imshow(self, ground_truth):
         """
         Display a time-animated heatmap from ground truth data stored in a DataFrame.
+
+        Parameters:
+            ground_truth (pd.DataFrame): A DataFrame with columns ['timestep', 'x', 'y', 'value'].
+        """
+        # Extract unique timesteps
+        timesteps = sorted(ground_truth['timestep'].unique())
+
+        # Determine the color scale limits
+        zmin = ground_truth['value'].min()
+        zmax = ground_truth['value'].max()
+        
+        # Create the frames for animation
+        frames = []
+        for i, timestep in enumerate(timesteps):
+            frame_data = ground_truth[ground_truth['timestep'] == timestep]
+            z = frame_data.pivot(index='x', columns='y', values='value').values
+            frames.append(go.Frame(
+                data=[go.Heatmap(
+                    z=z, 
+                    x=sorted(frame_data['x'].unique()), 
+                    y=sorted(frame_data['y'].unique()),
+                    zmin=zmin, 
+                    zmax=zmax
+                )],
+                name=f"Frame {i}"
+            ))
+        
+        # Create the initial heatmap
+        first_timestep = ground_truth[ground_truth['timestep'] == timesteps[0]]
+        z = first_timestep.pivot(index='x', columns='y', values='value').values
+
+        # Define slider steps
+        slider_steps = [
+            {
+                "args": [[f"Frame {i}"], {"frame": {"duration": 500, "redraw": True}, "mode": "immediate"}],
+                "label": f"Frame {i}",
+                "method": "animate"
+            } for i in range(len(timesteps))
+        ]
+        
+        # Add the slider to the layout
+        sliders = [dict(
+            active=0,
+            currentvalue={"prefix": "Timestep: "},
+            steps=slider_steps
+        )]
+
+        fig = go.Figure(
+            data=[go.Heatmap(
+                z=z, 
+                x=sorted(first_timestep['x'].unique()), 
+                y=sorted(first_timestep['y'].unique()),
+                zmin=zmin, 
+                zmax=zmax
+            )],
+            layout=go.Layout(
+                title="Frame 0",
+                updatemenus=[dict(
+                    type="buttons",
+                    buttons=[
+                        dict(label="Play", method="animate", args=[None]),
+                        dict(label="Pause", method="animate", args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}])
+                    ]
+                )],
+                sliders=sliders
+            ),
+            frames=frames
+        )
+
+        return fig
+
+
+    def display_ground_truth_plotly(self, ground_truth):
+        """
+        This method is currently not in use. Display a time-animated heatmap from ground truth data stored in a DataFrame.
 
         Parameters:
             ground_truth (pd.DataFrame): A DataFrame with columns ['timestep', 'x', 'y', 'value'].
@@ -406,78 +364,4 @@ class ParcDash:
         )
 
         # Show the figure
-        return fig
-
-    def display_ground_truth_imshow(self, ground_truth):
-        """
-        Display a time-animated heatmap from ground truth data stored in a DataFrame.
-
-        Parameters:
-            ground_truth (pd.DataFrame): A DataFrame with columns ['timestep', 'x', 'y', 'value'].
-        """
-        # Extract unique timesteps
-        timesteps = sorted(ground_truth['timestep'].unique())
-
-        # Determine the color scale limits
-        zmin = ground_truth['value'].min()
-        zmax = ground_truth['value'].max()
-        
-        # Create the frames for animation
-        frames = []
-        for i, timestep in enumerate(timesteps):
-            frame_data = ground_truth[ground_truth['timestep'] == timestep]
-            z = frame_data.pivot(index='x', columns='y', values='value').values
-            frames.append(go.Frame(
-                data=[go.Heatmap(
-                    z=z, 
-                    x=sorted(frame_data['x'].unique()), 
-                    y=sorted(frame_data['y'].unique()),
-                    zmin=zmin, 
-                    zmax=zmax
-                )],
-                name=f"Frame {i}"
-            ))
-        
-        # Create the initial heatmap
-        first_timestep = ground_truth[ground_truth['timestep'] == timesteps[0]]
-        z = first_timestep.pivot(index='x', columns='y', values='value').values
-
-        # Define slider steps
-        slider_steps = [
-            {
-                "args": [[f"Frame {i}"], {"frame": {"duration": 500, "redraw": True}, "mode": "immediate"}],
-                "label": f"Frame {i}",
-                "method": "animate"
-            } for i in range(len(timesteps))
-        ]
-        
-        # Add the slider to the layout
-        sliders = [dict(
-            active=0,
-            currentvalue={"prefix": "Timestep: "},
-            steps=slider_steps
-        )]
-
-        fig = go.Figure(
-            data=[go.Heatmap(
-                z=z, 
-                x=sorted(first_timestep['x'].unique()), 
-                y=sorted(first_timestep['y'].unique()),
-                zmin=zmin, 
-                zmax=zmax
-            )],
-            layout=go.Layout(
-                title="Frame 0",
-                updatemenus=[dict(
-                    type="buttons",
-                    buttons=[
-                        dict(label="Play", method="animate", args=[None]),
-                        dict(label="Pause", method="animate", args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}])
-                    ]
-                )],
-                sliders=sliders
-            ),
-            frames=frames
-        )
-
         return fig
