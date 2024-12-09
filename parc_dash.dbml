@@ -1,14 +1,15 @@
 Project parc_dash {
   database_type: 'Mongo'
   Note: '''
-    # Physics-aware Recurrent Convolutional Neural Networks (PARCv2) Dashboard Project
+    # Physics-aware Recurrent Convolutional Neural Networks (PARCv2) Dashboard Project. Data from Visual Intelligence Laboratory. (2024). PARCv2: Physics-aware Recurrent Convolutional Neural Networks for Spatiotemporal Dynamics Modeling [Data set]. Zenodo.
   '''
 }
 Table Documents as D {
     id varchar [pk]
     variable varchar
     file_id varchar 
-    note: "Data from Visual Intelligence Laboratory. (2024). PARCv2: Physics-aware Recurrent Convolutional Neural Networks for Spatiotemporal Dynamics Modeling [Data set]. Zenodo."
+    note: 
+    "The id field is the unique identifier created by Mongo, and the variable is the field of interest, which can take values temperature, pressure, microstructure, velocity_x and velocity_y. The file_id field is a foreign key to the partitioned file, which resides in the File table"
 }
 
 Table File as F {
@@ -18,7 +19,7 @@ Table File as F {
     x int
     y int
     value float
-    note: "Timestep, x, y and value are stored in a dictionary named data that is nested with this file"
+    note: "This table is the fields in the GridFS used to partition the documents. Timestep, x, y and value are stored in a dictionary named data that is nested with this file. Timestep can take integer values greater than or equal to 0. X and y are positions in the field of interest. X takes integer values in the range [0, 128], and y takes integer values in the range [0, 256]. The value measures the field of interest at the x-y position and can take real values."
 }
 
 Ref: D.file_id - F.file_id
